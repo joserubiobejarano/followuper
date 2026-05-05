@@ -4,6 +4,7 @@ export type ParsedCsvRow = {
   customer_phone?: string;
   service_name?: string;
   visited_at?: string;
+  source?: string;
 };
 
 function parseCsvLine(line: string): string[] {

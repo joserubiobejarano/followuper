@@ -19,6 +19,13 @@ export async function POST(request: Request) {
   const isAuthorized = Boolean(cronSecret) && isBearer && token === cronSecret;
 
   if (!isAuthorized) {
+    if (process.env.NODE_ENV !== "production") {
+      console.info("[cron/send-followups] Unauthorized request", {
+        hasAuthorizationHeader: Boolean(rawAuth),
+        authorizationScheme: scheme ?? null,
+        hasCronSecret: Boolean(cronSecret)
+      });
+    }
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -26,7 +33,24 @@ export async function POST(request: Request) {
     SELECT v.*, b.name AS business_name, b.business_type, b.city, b.google_review_url, b.rebooking_url, b.tone, b.language, b.email_from_name
     FROM visits v
     JOIN businesses b ON b.id = v.business_id
-    WHERE v.visited_at BETWEEN now() - interval '25 hours' AND now() - interval '23 hours'
+    WHERE (
+      -- Automated integrations are expected to arrive in near real-time,
+      -- so we keep the tight ~24h follow-up window (23h to 25h after visit).
+      (
+        v.source IN ('square', 'opentable', 'fresha', 'webhook', 'api')
+        AND v.visited_at BETWEEN now() - interval '25 hours' AND now() - interval '23 hours'
+      )
+      OR
+      -- Manual/CSV uploads may be backfilled late, so we allow a flexible
+      -- window: eligible after 23h, but capped at 7 days to avoid stale sends.
+      (
+        v.source IN ('manual', 'csv')
+        AND v.visited_at <= now() - interval '23 hours'
+        AND v.visited_at >= now() - interval '7 days'
+        AND v.followup_status = 'pending'
+        AND v.followup_sent_at IS NULL
+      )
+    )
       AND v.followup_status = 'pending'
       AND v.followup_sent_at IS NULL
       AND v.customer_email IS NOT NULL

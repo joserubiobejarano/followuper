@@ -27,6 +27,11 @@ psql "$DATABASE_URL" -f db/migrations/001_post_visit_followup_agent.sql
 4. Trigger cron manually (below).
 5. Refresh dashboard and verify status becomes `sent` or `failed`.
 
+## Follow-up timing behavior
+
+- Automatic integrations (`square`, `opentable`, `fresha`, `webhook`, `api`) send around 24 hours after visit (`visited_at` between 23 and 25 hours ago).
+- Manual and CSV imports (`manual`, `csv`) can still send when the visit is older than 23 hours and up to 7 days old, as long as it is still pending and unsent.
+
 ## Manual cron test with curl
 
 ```bash
@@ -39,6 +44,19 @@ Windows PowerShell:
 ```powershell
 curl -Method Post "$env:APP_BASE_URL/api/cron/send-followups" `
   -Headers @{ Authorization = "Bearer $env:CRON_SECRET" }
+```
+
+## Dev SQL test note (manual/CSV backfill)
+
+Use this SQL to quickly make a record eligible under manual/CSV logic:
+
+```sql
+update visits
+set visited_at = now() - interval '2 days',
+    source = 'csv',
+    followup_status = 'pending',
+    followup_sent_at = null
+where id = '<id>';
 ```
 
 ## CSV example

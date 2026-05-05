@@ -20,14 +20,22 @@ export default function UploadVisitsPage() {
     const formData = new FormData();
     formData.append("file", file);
 
-    const res = await fetch("/api/followups/upload", {
-      method: "POST",
-      body: formData
-    });
-    const data = await res.json();
+    let res: Response;
+    try {
+      res = await fetch("/api/followups/upload", {
+        method: "POST",
+        body: formData
+      });
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Network error while uploading CSV.");
+      return;
+    }
+
+    const contentType = res.headers.get("content-type") || "";
+    const data = contentType.includes("application/json") ? await res.json() : null;
 
     if (!res.ok) {
-      setMessage(data.error || "Upload failed");
+      setMessage(data?.error || "Upload failed");
       return;
     }
 
@@ -38,9 +46,15 @@ export default function UploadVisitsPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-4 p-6">
       <h1 className="text-2xl font-semibold">Upload Completed Visits</h1>
-      <p className="text-sm text-gray-600">
-        Expected columns: customer_name, customer_email, customer_phone, service_name, visited_at
-      </p>
+      <div className="rounded border bg-gray-50 p-4 text-sm text-gray-700">
+        <p className="font-medium text-gray-900">Expected CSV columns</p>
+        <p className="mt-1 font-mono">
+          customer_name, customer_email, customer_phone, service_name, visited_at
+        </p>
+        <a className="mt-2 inline-block text-black underline" href="/visits-example.csv" download>
+          Download example CSV
+        </a>
+      </div>
       <form onSubmit={onSubmit} className="space-y-3 rounded border p-4">
         <input
           type="file"
@@ -53,10 +67,25 @@ export default function UploadVisitsPage() {
       </form>
       {message ? <p className="text-sm">{message}</p> : null}
       {result ? (
-        <div className="rounded border p-4 text-sm">
-          <p>Inserted: {result.inserted}</p>
-          <p>Skipped: {result.skipped}</p>
-          <p>Errors: {result.errors?.length || 0}</p>
+        <div className="space-y-3 rounded border p-4 text-sm">
+          <p className="font-medium">Import summary</p>
+          <p>Rows processed: {result.rows_processed}</p>
+          <p>Visits inserted: {result.visits_inserted}</p>
+          <p>Rows skipped: {result.rows_skipped}</p>
+          <p>Duplicates skipped: {result.duplicates_skipped}</p>
+          <p>Error rows: {result.errors?.length || 0}</p>
+          {result.errors?.length ? (
+            <div className="rounded border bg-gray-50 p-3">
+              <p className="mb-2 font-medium">Errors by row</p>
+              <ul className="space-y-1">
+                {result.errors.map((error: { row: number; reason: string }, idx: number) => (
+                  <li key={`${error.row}-${idx}`}>
+                    Row {error.row}: {error.reason}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>

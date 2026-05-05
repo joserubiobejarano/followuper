@@ -87,6 +87,26 @@ export async function createVisit(input: {
   return rows[0];
 }
 
+export async function findCsvVisitDuplicate(input: {
+  business_id: string;
+  customer_email: string;
+  service_name?: string;
+  visited_at: string;
+}) {
+  const rows = await sql`
+    SELECT id
+    FROM visits
+    WHERE business_id = ${input.business_id}
+      AND source = 'csv'
+      AND lower(customer_email) = lower(${input.customer_email})
+      AND coalesce(service_name, '') = coalesce(${input.service_name || null}, '')
+      AND visited_at = ${input.visited_at}
+    LIMIT 1
+  `;
+
+  return rows[0] ?? null;
+}
+
 export async function getFollowupStats(businessId?: string) {
   if (businessId) {
     const rows = await sql`

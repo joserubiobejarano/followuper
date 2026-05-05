@@ -1,1 +1,13 @@
-{}
+{
+  "/_not-found/page": "app/_not-found/page.js",
+  "/api/cron/send-followups/route": "app/api/cron/send-followups/route.js",
+  "/api/followups/settings/route": "app/api/followups/settings/route.js",
+  "/api/followups/upload/route": "app/api/followups/upload/route.js",
+  "/api/followups/visits/route": "app/api/followups/visits/route.js",
+  "/api/webhooks/booking/route": "app/api/webhooks/booking/route.js",
+  "/dashboard/followups/new/page": "app/dashboard/followups/new/page.js",
+  "/dashboard/followups/settings/page": "app/dashboard/followups/settings/page.js",
+  "/dashboard/followups/page": "app/dashboard/followups/page.js",
+  "/dashboard/followups/upload/page": "app/dashboard/followups/upload/page.js",
+  "/page": "app/page.js"
+}
