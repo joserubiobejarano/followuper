@@ -8,7 +8,10 @@ export default function HomePage() {
         <p className="mt-2 text-sm text-gray-600">
           Open the follow-up dashboard to manage visits and settings.
         </p>
-        <Link href="/dashboard/followups" className="mt-4 inline-block rounded bg-black px-4 py-2 text-white">
+        <Link
+          href="/dashboard/followups"
+          className="mt-4 inline-block rounded bg-[#0f172b] px-4 py-2 text-white transition hover:opacity-90"
+        >
           Open Dashboard
         </Link>
       </div>

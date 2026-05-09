@@ -113,21 +113,23 @@ export async function getFollowupStats(businessId?: string) {
       SELECT
         COUNT(*) FILTER (WHERE followup_status = 'pending')::int AS pending,
         COUNT(*) FILTER (WHERE followup_status = 'sent')::int AS sent,
-        COUNT(*) FILTER (WHERE followup_status = 'failed')::int AS failed
+        COUNT(*) FILTER (WHERE followup_status = 'failed')::int AS failed,
+        COUNT(*) FILTER (WHERE followup_status = 'skipped')::int AS skipped
       FROM visits
       WHERE business_id = ${businessId}
     `;
-    return rows[0] || { pending: 0, sent: 0, failed: 0 };
+    return rows[0] || { pending: 0, sent: 0, failed: 0, skipped: 0 };
   }
 
   const rows = await sql`
     SELECT
       COUNT(*) FILTER (WHERE followup_status = 'pending')::int AS pending,
       COUNT(*) FILTER (WHERE followup_status = 'sent')::int AS sent,
-      COUNT(*) FILTER (WHERE followup_status = 'failed')::int AS failed
+      COUNT(*) FILTER (WHERE followup_status = 'failed')::int AS failed,
+      COUNT(*) FILTER (WHERE followup_status = 'skipped')::int AS skipped
     FROM visits
   `;
-  return rows[0] || { pending: 0, sent: 0, failed: 0 };
+  return rows[0] || { pending: 0, sent: 0, failed: 0, skipped: 0 };
 }
 
 export async function getRecentVisits(limit = 20, businessId?: string) {
@@ -135,9 +137,17 @@ export async function getRecentVisits(limit = 20, businessId?: string) {
     return sql`
       SELECT
         v.*,
-        b.name AS business_name
+        b.name AS business_name,
+        fm.error_message AS followup_error_reason
       FROM visits v
       LEFT JOIN businesses b ON b.id = v.business_id
+      LEFT JOIN LATERAL (
+        SELECT error_message
+        FROM followup_messages
+        WHERE visit_id = v.id AND status = 'failed'
+        ORDER BY created_at DESC
+        LIMIT 1
+      ) fm ON true
       WHERE v.business_id = ${businessId}
       ORDER BY v.visited_at DESC
       LIMIT ${limit}
@@ -147,9 +157,17 @@ export async function getRecentVisits(limit = 20, businessId?: string) {
   return sql`
     SELECT
       v.*,
-      b.name AS business_name
+      b.name AS business_name,
+      fm.error_message AS followup_error_reason
     FROM visits v
     LEFT JOIN businesses b ON b.id = v.business_id
+    LEFT JOIN LATERAL (
+      SELECT error_message
+      FROM followup_messages
+      WHERE visit_id = v.id AND status = 'failed'
+      ORDER BY created_at DESC
+      LIMIT 1
+    ) fm ON true
     ORDER BY v.visited_at DESC
     LIMIT ${limit}
   `;
